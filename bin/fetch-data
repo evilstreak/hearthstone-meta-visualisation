@@ -1,0 +1,6 @@
+#!/bin/bash
+
+DATA_URL="https://docs.google.com/spreadsheets/d/1osCVci8-7ttXp_CjWORzEUYf5VQlGWN_ZsOUrbCX0AI/export?gid=2076844919&format=csv"
+OUTPUT_FILE="data/raw-vs-data.csv"
+
+curl "$DATA_URL" > "$OUTPUT_FILE"
