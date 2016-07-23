@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hearthstone meta matchups visualisation</title>
+  <style type="text/css">
+    body {
+      font: 16px/24px "Helvetica Neue", Helvetica, sans-serif;
+      padding-top: 200px;
+    }
+
+    table {
+      border-collapse: collapse;
+      table-layout: fixed;
+      width: 1000px;
+    }
+
+    th {
+      font-weight: normal;
+    }
+
+    thead th {
+      text-align: left;
+      white-space: nowrap;
+
+      transform: rotate(315deg) translate(100%);
+      transform-origin: bottom right;
+
+      width: 50%;
+    }
+
+    thead th:first-child {
+      border-bottom: 1px solid #ccc;
+      width: 200px;
+    }
+
+    thead span {
+      border-bottom: 1px solid #ccc;
+      display: inline-block;
+    }
+
+    tbody th {
+      padding: 0 10px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+
+    td {
+      border: 1px solid #ccc;
+      padding: 10px 5px;
+      text-align: center;
+      width: 30px;
+    }
+  </style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th><div><span>Aggro Shaman</span></div></th>
+        <th><div><span>Zoolock</span></div></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>Aggro Shaman</th>
+        <td>0.5</td>
+        <td>0.42</td>
+      </tr>
+      <tr>
+        <th>Zoolock</th>
+        <td>0.58</td>
+        <td>0.5</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
