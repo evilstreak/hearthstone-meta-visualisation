@@ -1,0 +1,183 @@
+#!/usr/bin/env ruby
+
+require "csv"
+require "json"
+
+class Meta
+  def initialize(records)
+    @records = records
+  end
+
+  def to_json
+    JSON.generate(to_hash)
+  end
+
+  def to_hash
+    {
+      decks: decks.map(&:to_hash),
+    }
+  end
+
+private
+  attr_reader :records
+
+  def deck_names
+    @deck_names ||= records.map(&:recording_player_deck).uniq
+  end
+
+  def decks
+    @decks ||= deck_names.map { |name|
+      Deck.new(
+        name,
+        records,
+      )
+    }
+  end
+end
+
+class Deck
+  def initialize(name, records)
+    @name = name
+    @records = records
+  end
+
+  # how frequently this deck appears in the meta
+  def frequency
+    opponents_faced.to_f / sample_size
+  end
+
+  def win_rate
+    @win_rate ||= matchups
+      .map { |matchup|
+        matchup.win_rate * opponent_frequencies.fetch(matchup.opponent)
+      }
+      .reduce(&:+) / sample_size
+  end
+
+  def to_hash
+    {
+      name: name,
+      frequency: frequency,
+      win_rate: win_rate,
+      matchups: matchups.map(&:to_hash),
+    }
+  end
+
+private
+  attr_reader :name, :records
+
+  def sample_size
+    @sample_size ||= records.map(&:games_played).reduce(&:+)
+  end
+
+  def hero_games
+    @hero_games ||= records
+      .select { |r| r.recording_player_deck == name }
+      .sort_by(&:opponent_deck)
+  end
+
+  def opponent_games
+    @opponent_games ||= records
+      .select { |r| r.opponent_deck == name }
+      .sort_by(&:recording_player_deck)
+  end
+
+  def matchups
+    @matchups ||= hero_games
+      .zip(opponent_games)
+      .map { |hero_record, opponent_record|
+        raise "uhoh" unless hero_record.opponent_deck == opponent_record.recording_player_deck
+        Matchup.new(
+          hero_record.opponent_deck,
+          hero_record.games_won + opponent_record.games_lost,
+          hero_record.games_lost + opponent_record.games_won,
+        )
+      }
+  end
+
+  def games_won
+    @games_won ||= matchups.map(&:games_won).reduce(&:+)
+  end
+
+  def opponents_faced
+    @opponents_faced ||= opponent_games.map(&:games_played).reduce(&:+)
+  end
+
+  def opponent_frequencies
+    @opponent_frequencies ||= records
+      .group_by(&:opponent_deck)
+      .reduce({}) { |memo, (deck, deck_records)|
+        memo.merge(
+          deck => deck_records.map(&:games_played).reduce(&:+),
+        )
+      }
+  end
+end
+
+class Matchup
+  attr_reader :opponent, :games_won, :games_lost
+
+  def initialize(opponent, games_won, games_lost)
+    @opponent = opponent
+    @games_won = games_won
+    @games_lost = games_lost
+  end
+
+  def games_played
+    games_won + games_lost
+  end
+
+  def win_rate
+    if games_played == 0
+      0.5
+    else
+      games_won.to_f / games_played
+    end
+  end
+
+  def to_hash
+    {
+      opponent: opponent,
+      games_played: games_played,
+      games_won: games_won,
+      games_lost: games_lost,
+      win_rate: win_rate,
+    }
+  end
+end
+
+class Record
+  attr_reader :recording_player_deck, :opponent_deck, :games_won, :games_lost
+
+  def initialize(recording_player_deck, opponent_deck, games_won, games_lost)
+    @recording_player_deck = recording_player_deck
+    @opponent_deck = opponent_deck
+    @games_won = games_won
+    @games_lost = games_lost
+  end
+
+  def games_played
+    games_won + games_lost
+  end
+end
+
+csv = CSV.new(ARGF.read.encode(universal_newline: true)).to_a
+
+deck_names = csv[0].to_a.compact.drop(1)
+records = csv[1..-2].flat_map { |row|
+  recording_player_deck = row[0]
+  results = row[1..-1].each_slice(2).to_a
+
+  deck_names.zip(results).map { |opponent_deck, (games_won, games_lost)|
+    Record.new(
+      recording_player_deck,
+      opponent_deck,
+      games_won.to_i,
+      games_lost.to_i,
+    )
+  }
+}
+
+meta = Meta.new(records)
+# require "pp"; pp meta.to_hash
+puts meta.to_json
