@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hearthstone meta matchups visualisation</title>
+  <style type="text/css">
+    body {
+      font: 12px/18px "Helvetica Neue", Helvetica, sans-serif;
+      padding: 40px 30px 10px 10px;
+    }
+
+    table {
+      border-collapse: collapse;
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    th {
+      font-weight: normal;
+    }
+
+    thead th {
+      font-size: 8px;
+      line-height: 12px;
+      text-align: left;
+      white-space: nowrap;
+
+      transform: translate(-50%) rotate(315deg) translate(100%);
+      transform-origin: bottom right;
+    }
+
+    thead th:first-child {
+      width: 115px;
+      transform: none;
+    }
+
+    thead th:nth-child(2) {
+      transform: none;
+      width: 45px;
+    }
+
+    thead span {
+      display: inline-block;
+    }
+
+    tbody th {
+      padding: 2px;
+      text-align: left;
+    }
+
+    td {
+      border: 1px solid #fff;
+      color: transparent;
+      cursor: default;
+      padding: 0;
+      text-align: center;
+      width: 30px;
+    }
+
+    th + td {
+      color: #000;
+      text-align: left;
+    }
+
+    td:hover {
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th>Deck</th>
+        <th>Win rate</th>
+        <% for deck in @decks.select { |d| d.frequency > 0.009 } %>
+          <th width="<%= deck.frequency * 100 %>%">
+            <div><span>vs <%= deck.name %></span></div>
+          </th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% for deck in @decks.sort_by(&:win_rate).reverse %>
+        <tr>
+          <th><%= deck.name %></th>
+          <td><%= (deck.win_rate * 100).round(3) %>%</td>
+          <% for opponent in @decks.select { |d| d.frequency > 0.009 } %>
+            <td style="background-color: <%= deck.matchup(opponent.name).colour %>;">
+              <%= deck.matchup(opponent.name).win_rate %>
+            </td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</body>
+</html>

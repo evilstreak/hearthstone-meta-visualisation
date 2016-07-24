@@ -1,0 +1,86 @@
+#!/usr/bin/env ruby
+
+require "erb"
+require "json"
+
+class Deck
+  def initialize(json)
+    @json = json
+  end
+
+  def name
+    json.fetch("name")
+  end
+
+  def matchups
+    @matchups ||= json.fetch("matchups").map { |matchup|
+      Matchup.new(matchup)
+    }
+  end
+
+  def matchup(opponent)
+    matchups.find { |m| m.opponent == opponent }
+  end
+
+  def frequency
+    json.fetch("frequency").round(3)
+  end
+
+  def win_rate
+    json.fetch("win_rate").round(3)
+  end
+
+private
+  attr_reader :json
+end
+
+class Matchup
+  def initialize(json)
+    @json = json
+  end
+
+  def win_rate
+    json.fetch("win_rate").round(3)
+  end
+
+  def colour
+    "rgba(#{colour_r}, #{colour_g}, #{colour_b}, #{colour_a})"
+  end
+
+  def opponent
+    json.fetch("opponent")
+  end
+
+private
+  attr_reader :json
+
+  def colour_r
+    [[255, (1 - win_rate) * 255 * 4 - 255].min, 0].max.floor
+  end
+
+  def colour_g
+    [[255, win_rate * 255 * 4 - 255].min, 0].max.floor
+  end
+
+  def colour_b
+    0
+  end
+
+  def colour_a
+    [win_rate, 1 - win_rate].max * [[1.0, (games_played - 50) * 0.02].min, 0].max
+  end
+
+  def games_played
+    json.fetch("games_played")
+  end
+end
+
+json_data = JSON.load(ARGF.read)
+
+@decks = json_data.fetch("decks").map { |deck|
+  Deck.new(deck)
+}
+
+template = File.read("template.erb")
+
+puts ERB.new(template).result
