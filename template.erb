@@ -97,19 +97,120 @@
 <script type="text/javascript">
 var Visualisation = React.createClass({
   displayName: "Visualisation",
+  getInitialState: function() {
+    return {
+      frequencyWeighted: true
+    };
+  },
+  render: function() {
+    return React.createElement(
+      "div",
+      null,
+      React.createElement(
+        ControlPanel,
+        {
+          frequencyWeighted: this.state.frequencyWeighted,
+          setFrequencyWeighted: this.setFrequencyWeighted
+        }
+      ),
+      React.createElement(
+        Table,
+        {
+          decks: this.props.data.decks,
+          frequencyWeighted: this.state.frequencyWeighted
+        }
+      )
+    );
+  },
+  setFrequencyWeighted: function(value) {
+    this.setState({
+      frequencyWeighted: value
+    });
+  }
+});
+
+var ControlPanel = React.createClass({
+  displayName: "ControlPanel",
+  render: function() {
+    return React.createElement(
+      "div",
+      null,
+      this.controls()
+    );
+  },
+  controls: function() {
+    return [
+      React.createElement(
+        FrequencyWeightedToggle,
+        {
+          frequencyWeighted: this.props.frequencyWeighted,
+          setFrequencyWeighted: this.props.setFrequencyWeighted,
+          key: "frequency-weighted-toggle"
+        }
+      )
+    ];
+  }
+});
+
+var FrequencyWeightedToggle = React.createClass({
+  render: function() {
+    return React.createElement(
+      "div",
+      null,
+      React.createElement(
+        "input",
+        {
+          type: "checkbox",
+          checked: this.props.frequencyWeighted,
+          id: "frequency-weighted-toggle",
+          onChange: this.handleChange
+        }
+      ),
+      React.createElement(
+        "label",
+        {
+          htmlFor: "frequency-weighted-toggle"
+        },
+        "Frequency weighted"
+      )
+    );
+  },
+  handleChange: function(event) {
+    this.props.setFrequencyWeighted(event.target.checked);
+  }
+});
+
+var Table = React.createClass({
+  displayName: "Table",
   render: function() {
     return React.createElement(
       "table",
       null,
       React.createElement(
         TableHead,
-        { decks: this.props.data.decks }
+        {
+          decks: this.vsDecks(),
+          frequencyWeighted: this.props.frequencyWeighted
+        }
       ),
       React.createElement(
         TableBody,
-        { decks: this.props.data.decks }
+        {
+          decks: this.props.decks,
+          vsDecks: this.vsDecks()
+        }
       )
     );
+  },
+  vsDecks: function() {
+    if (this.props.frequencyWeighted) {
+      return this.props.decks.filter(function(deck) {
+        return deck.frequency > 0.01;
+      });
+    }
+    else {
+      return this.props.decks;
+    }
   }
 });
 
@@ -131,13 +232,32 @@ var TableHead = React.createClass({
   deckHeadings: function() {
     return this.props.decks.map(function(deck) {
       return React.createElement(
-        "th",
+        DeckHeading,
         {
+          deck: deck,
+          frequencyWeighted: this.props.frequencyWeighted,
           key: deck.name
-        },
-        "vs " + deck.name
+        }
       );
-    });
+    }.bind(this));
+  }
+});
+
+var DeckHeading = React.createClass({
+  render: function() {
+    return React.createElement(
+      "th",
+      { width: this.width() },
+      "vs " + this.props.deck.name
+    );
+  },
+  width: function() {
+    if (this.props.frequencyWeighted) {
+      return this.props.deck.frequency * 100 + "%";
+    }
+    else {
+      return "auto";
+    }
   }
 });
 
@@ -156,10 +276,11 @@ var TableBody = React.createClass({
         TableRow,
         {
           deck: deck,
-          key: deck.name
+          key: deck.name,
+          vsDecks: this.props.vsDecks
         }
       );
-    });
+    }.bind(this));
   }
 });
 
@@ -171,11 +292,18 @@ var TableRow = React.createClass({
       null,
       React.createElement("th", { key: "name" }, this.props.deck.name),
       React.createElement("td", { key: "win_rate" }, this.winRate()),
-      this.matchups()
+      this.matchupCells()
     );
   },
   matchups: function() {
-    return this.props.deck.matchups.map(function(matchup) {
+    return this.props.vsDecks.map(function(deck) {
+      return this.props.deck.matchups.find(function(matchup) {
+        return matchup.opponent == deck.name;
+      });
+    }.bind(this));
+  },
+  matchupCells: function() {
+    return this.matchups().map(function(matchup) {
       return React.createElement(
         Matchup,
         {
