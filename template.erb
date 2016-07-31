@@ -63,6 +63,7 @@
   </style>
 </head>
 <body>
+<div id="visualisation">
   <table>
     <thead>
       <tr>
@@ -89,5 +90,168 @@
       <% end %>
     </tbody>
   </table>
+</div>
+
+<script type="text/javascript" src="js/react-with-addons-15.2.0.js"></script>
+<script type="text/javascript" src="js/react-dom-15.2.0.js"></script>
+<script type="text/javascript">
+var Visualisation = React.createClass({
+  displayName: "Visualisation",
+  render: function() {
+    return React.createElement(
+      "table",
+      null,
+      React.createElement(
+        TableHead,
+        { decks: this.props.data.decks }
+      ),
+      React.createElement(
+        TableBody,
+        { decks: this.props.data.decks }
+      )
+    );
+  }
+});
+
+var TableHead = React.createClass({
+  displayName: "TableHead",
+  render: function() {
+    return React.createElement(
+      "thead",
+      null,
+      React.createElement(
+        "tr",
+        null,
+        React.createElement("th", { key: "deck-name" }, "Deck"),
+        React.createElement("th", { key: "deck-win-rate" }, "Win rate"),
+        this.deckHeadings()
+      )
+    );
+  },
+  deckHeadings: function() {
+    return this.props.decks.map(function(deck) {
+      return React.createElement(
+        "th",
+        {
+          key: deck.name
+        },
+        "vs " + deck.name
+      );
+    });
+  }
+});
+
+var TableBody = React.createClass({
+  displayName: "TableBody",
+  render: function() {
+    return React.createElement(
+      "tbody",
+      null,
+      this.rows()
+    );
+  },
+  rows: function() {
+    return this.props.decks.map(function(deck) {
+      return React.createElement(
+        TableRow,
+        {
+          deck: deck,
+          key: deck.name
+        }
+      );
+    });
+  }
+});
+
+var TableRow = React.createClass({
+  displayName: "TableRow",
+  render: function() {
+    return React.createElement(
+      "tr",
+      null,
+      React.createElement("th", { key: "name" }, this.props.deck.name),
+      React.createElement("td", { key: "win_rate" }, this.winRate()),
+      this.matchups()
+    );
+  },
+  matchups: function() {
+    return this.props.deck.matchups.map(function(matchup) {
+      return React.createElement(
+        Matchup,
+        {
+          key: matchup.opponent,
+          matchup: matchup
+        }
+      );
+    });
+  },
+  winRate: function() {
+    return (this.props.deck.win_rate * 100).toFixed(1) + "%";
+  }
+});
+
+var Matchup = React.createClass({
+  render: function() {
+    return React.createElement(
+      "td",
+      { style: { backgroundColor: this.colour() } },
+      this.winRate()
+    );
+  },
+  winRate: function() {
+    return (this.props.matchup.win_rate * 100).toFixed(1) + "%";
+  },
+  colour: function() {
+    return "rgba(" +
+      this.colourR() + ", " +
+      this.colourG() + ", " +
+      this.colourB() + ", " +
+      this.colourA() +
+    ")";
+  },
+  colourR: function() {
+    return Math.floor(
+      Math.max(
+        0,
+        Math.min(
+          255,
+          (1 - this.props.matchup.win_rate) * 255 * 4 - 255
+        )
+      )
+    );
+  },
+  colourG: function() {
+    return Math.floor(
+      Math.max(
+        0,
+        Math.min(
+          255,
+          this.props.matchup.win_rate * 255 * 4 - 255
+        )
+      )
+    );
+  },
+  colourB: function() {
+    return 0;
+  },
+  colourA: function() {
+    return Math.max(
+      this.props.matchup.win_rate,
+      1 - this.props.matchup.win_rate
+    ) * Math.max(
+      0,
+      Math.min(
+        1,
+        (this.props.matchup.games_played - 50) * 0.02
+      )
+    );
+  }
+});
+
+ReactDOM.render(
+  React.createElement(Visualisation, { data: <%= @raw_json %> }),
+  document.getElementById("visualisation")
+);
+</script>
 </body>
 </html>
