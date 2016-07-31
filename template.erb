@@ -38,10 +38,6 @@
       width: 45px;
     }
 
-    thead span {
-      display: inline-block;
-    }
-
     tbody th {
       padding: 2px;
       text-align: left;
@@ -74,7 +70,7 @@
         <th>Win rate</th>
         <% for deck in @decks.select { |d| d.frequency > 0.009 } %>
           <th width="<%= deck.frequency * 100 %>%">
-            <div><span>vs <%= deck.name %></span></div>
+            vs <%= deck.name %>
           </th>
         <% end %>
       </tr>
