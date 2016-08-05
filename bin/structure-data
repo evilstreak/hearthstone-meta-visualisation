@@ -91,7 +91,10 @@ private
     @matchups ||= hero_games
       .zip(opponent_games)
       .map { |hero_record, opponent_record|
-        raise "uhoh" unless hero_record.opponent_deck == opponent_record.recording_player_deck
+        if hero_record.opponent_deck != opponent_record.recording_player_deck
+          raise "Zipped together non matching decks: #{hero_record.opponent_deck} and #{opponent_record.recording_player_deck}"
+        end
+
         Matchup.new(
           hero_record.opponent_deck,
           hero_record.games_won + opponent_record.games_lost,
