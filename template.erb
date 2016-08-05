@@ -185,7 +185,8 @@ var Table = React.createClass({
   getInitialState: function() {
     return {
       rowSortKey: "deck",
-      reverseRowSort: false
+      reverseRowSort: false,
+      matchupSortDeck: null,
     };
   },
   render: function() {
@@ -204,20 +205,44 @@ var Table = React.createClass({
         TableBody,
         {
           decks: this.decks(),
-          vsDecks: this.vsDecks()
+          vsDecks: this.vsDecks(),
+          sortMatchups: this.sortMatchups
         }
       )
     );
   },
   vsDecks: function() {
+    var decks = this.props.decks.slice(0);
+
+    if (this.state.matchupSortDeck) {
+      var matchups = this.state.matchupSortDeck.matchups.slice(0);
+
+      matchups.sort(function(a, b) {
+        if (a.win_rate > b.win_rate) {
+          return -1;
+        }
+        else if (b.win_rate > a.win_rate) {
+          return 1;
+        }
+        else {
+          return 0;
+        }
+      });
+
+      decks = matchups.map(function(matchup) {
+        return decks.find(function(deck) {
+          return matchup.opponent == deck.name;
+        });
+      });
+    }
+
     if (this.props.frequencyWeighted) {
-      return this.props.decks.filter(function(deck) {
+      decks = decks.filter(function(deck) {
         return deck.frequency > 0.01;
       });
     }
-    else {
-      return this.props.decks;
-    }
+
+    return decks;
   },
   decks: function() {
     var decks = this.props.decks.slice(0);
@@ -271,6 +296,11 @@ var Table = React.createClass({
         reverseRowSort: false
       });
     }
+  },
+  sortMatchups: function(deck) {
+    this.setState({
+      matchupSortDeck: (deck == this.state.matchupSortDeck ? null : deck)
+    });
   }
 });
 
@@ -362,7 +392,8 @@ var TableBody = React.createClass({
         {
           deck: deck,
           key: deck.name,
-          vsDecks: this.props.vsDecks
+          vsDecks: this.props.vsDecks,
+          sortMatchups: this.props.sortMatchups
         }
       );
     }.bind(this));
@@ -375,7 +406,14 @@ var TableRow = React.createClass({
     return React.createElement(
       "tr",
       null,
-      React.createElement("th", { key: "name" }, this.props.deck.name),
+      React.createElement(
+        "th",
+        {
+          key: "name",
+          onClick: this.handleClick
+        },
+        this.props.deck.name
+      ),
       React.createElement("td", { key: "win_rate" }, this.winRate()),
       this.matchupCells()
     );
@@ -400,6 +438,9 @@ var TableRow = React.createClass({
   },
   winRate: function() {
     return (this.props.deck.win_rate * 100).toFixed(1) + "%";
+  },
+  handleClick: function() {
+    this.props.sortMatchups(this.props.deck);
   }
 });
 
