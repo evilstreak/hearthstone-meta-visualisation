@@ -63,6 +63,7 @@
   </style>
 </head>
 <body>
+<div id="visualisation">
   <table>
     <thead>
       <tr>
@@ -89,5 +90,422 @@
       <% end %>
     </tbody>
   </table>
+</div>
+
+<script type="text/javascript" src="js/react-with-addons-15.2.0.js"></script>
+<script type="text/javascript" src="js/react-dom-15.2.0.js"></script>
+<script type="text/javascript">
+var Visualisation = React.createClass({
+  displayName: "Visualisation",
+  getInitialState: function() {
+    return {
+      frequencyWeighted: true
+    };
+  },
+  render: function() {
+    return React.createElement(
+      "div",
+      null,
+      React.createElement(
+        ControlPanel,
+        {
+          frequencyWeighted: this.state.frequencyWeighted,
+          setFrequencyWeighted: this.setFrequencyWeighted
+        }
+      ),
+      React.createElement(
+        Table,
+        {
+          decks: this.props.data.decks,
+          frequencyWeighted: this.state.frequencyWeighted
+        }
+      )
+    );
+  },
+  setFrequencyWeighted: function(value) {
+    this.setState({
+      frequencyWeighted: value
+    });
+  }
+});
+
+var ControlPanel = React.createClass({
+  displayName: "ControlPanel",
+  render: function() {
+    return React.createElement(
+      "div",
+      null,
+      this.controls()
+    );
+  },
+  controls: function() {
+    return [
+      React.createElement(
+        FrequencyWeightedToggle,
+        {
+          frequencyWeighted: this.props.frequencyWeighted,
+          setFrequencyWeighted: this.props.setFrequencyWeighted,
+          key: "frequency-weighted-toggle"
+        }
+      )
+    ];
+  }
+});
+
+var FrequencyWeightedToggle = React.createClass({
+  render: function() {
+    return React.createElement(
+      "div",
+      null,
+      React.createElement(
+        "input",
+        {
+          type: "checkbox",
+          checked: this.props.frequencyWeighted,
+          id: "frequency-weighted-toggle",
+          onChange: this.handleChange
+        }
+      ),
+      React.createElement(
+        "label",
+        {
+          htmlFor: "frequency-weighted-toggle"
+        },
+        "Frequency weighted"
+      )
+    );
+  },
+  handleChange: function(event) {
+    this.props.setFrequencyWeighted(event.target.checked);
+  }
+});
+
+var Table = React.createClass({
+  displayName: "Table",
+  getInitialState: function() {
+    return {
+      rowSortKey: "deck",
+      reverseRowSort: false,
+      matchupSortDeck: null,
+    };
+  },
+  render: function() {
+    return React.createElement(
+      "table",
+      null,
+      React.createElement(
+        TableHead,
+        {
+          decks: this.vsDecks(),
+          frequencyWeighted: this.props.frequencyWeighted,
+          sortRows: this.sortRows
+        }
+      ),
+      React.createElement(
+        TableBody,
+        {
+          decks: this.decks(),
+          vsDecks: this.vsDecks(),
+          sortMatchups: this.sortMatchups
+        }
+      )
+    );
+  },
+  vsDecks: function() {
+    var decks = this.props.decks.slice(0);
+
+    if (this.state.matchupSortDeck) {
+      var matchups = this.state.matchupSortDeck.matchups.slice(0);
+
+      matchups.sort(function(a, b) {
+        if (a.win_rate > b.win_rate) {
+          return -1;
+        }
+        else if (b.win_rate > a.win_rate) {
+          return 1;
+        }
+        else {
+          return 0;
+        }
+      });
+
+      decks = matchups.map(function(matchup) {
+        return decks.find(function(deck) {
+          return matchup.opponent == deck.name;
+        });
+      });
+    }
+
+    if (this.props.frequencyWeighted) {
+      decks = decks.filter(function(deck) {
+        return deck.frequency > 0.01;
+      });
+    }
+
+    return decks;
+  },
+  decks: function() {
+    var decks = this.props.decks.slice(0);
+
+    if (this.state.rowSortKey == "deck") {
+      decks = decks.sort(function(a, b) {
+        if (a.hero_class > b.hero_class) {
+          return 1;
+        }
+        else if (b.hero_class > a.hero_class) {
+          return -1;
+        }
+        else if (a.name > b.name) {
+          return 1;
+        }
+        else if (b.name > a.name) {
+          return -1;
+        }
+        else {
+          return 0;
+        }
+      });
+    }
+    else if (this.state.rowSortKey == "win-rate") {
+      decks = decks.sort(function(a, b) {
+        if (a.win_rate > b.win_rate) {
+          return -1;
+        }
+        else if (b.win_rate > a.win_rate) {
+          return 1;
+        }
+        else {
+          return 0;
+        }
+      });
+    }
+
+    if (this.state.reverseRowSort) {
+      decks.reverse();
+    }
+
+    return decks;
+  },
+  sortRows: function(sortKey) {
+    if (sortKey == this.state.rowSortKey) {
+      this.setState({ reverseRowSort: !this.state.reverseRowSort });
+    }
+    else {
+      this.setState({
+        rowSortKey: sortKey,
+        reverseRowSort: false
+      });
+    }
+  },
+  sortMatchups: function(deck) {
+    this.setState({
+      matchupSortDeck: (deck == this.state.matchupSortDeck ? null : deck)
+    });
+  }
+});
+
+var TableHead = React.createClass({
+  displayName: "TableHead",
+  render: function() {
+    return React.createElement(
+      "thead",
+      null,
+      React.createElement(
+        "tr",
+        null,
+        React.createElement(
+          SortableColumnHeading,
+          {
+            key: "deck-name",
+            label: "Deck",
+            sortKey: "deck",
+            sortRows: this.props.sortRows
+          }
+        ),
+        React.createElement(
+          SortableColumnHeading,
+          {
+            key: "deck-win-rate",
+            label: "Win rate",
+            sortKey: "win-rate",
+            sortRows: this.props.sortRows
+          }
+        ),
+        this.deckHeadings()
+      )
+    );
+  },
+  deckHeadings: function() {
+    return this.props.decks.map(function(deck) {
+      return React.createElement(
+        DeckHeading,
+        {
+          deck: deck,
+          frequencyWeighted: this.props.frequencyWeighted,
+          key: deck.name
+        }
+      );
+    }.bind(this));
+  }
+});
+
+var SortableColumnHeading = React.createClass({
+  render: function() {
+    return React.createElement("th", { onClick: this.handleClick }, this.props.label);
+  },
+  handleClick: function() {
+    this.props.sortRows(this.props.sortKey);
+  }
+});
+
+var DeckHeading = React.createClass({
+  render: function() {
+    return React.createElement(
+      "th",
+      { width: this.width() },
+      "vs " + this.props.deck.name
+    );
+  },
+  width: function() {
+    if (this.props.frequencyWeighted) {
+      return this.props.deck.frequency * 100 + "%";
+    }
+    else {
+      return "auto";
+    }
+  }
+});
+
+var TableBody = React.createClass({
+  displayName: "TableBody",
+  render: function() {
+    return React.createElement(
+      "tbody",
+      null,
+      this.rows()
+    );
+  },
+  rows: function() {
+    return this.props.decks.map(function(deck) {
+      return React.createElement(
+        TableRow,
+        {
+          deck: deck,
+          key: deck.name,
+          vsDecks: this.props.vsDecks,
+          sortMatchups: this.props.sortMatchups
+        }
+      );
+    }.bind(this));
+  }
+});
+
+var TableRow = React.createClass({
+  displayName: "TableRow",
+  render: function() {
+    return React.createElement(
+      "tr",
+      null,
+      React.createElement(
+        "th",
+        {
+          key: "name",
+          onClick: this.handleClick
+        },
+        this.props.deck.name
+      ),
+      React.createElement("td", { key: "win_rate" }, this.winRate()),
+      this.matchupCells()
+    );
+  },
+  matchups: function() {
+    return this.props.vsDecks.map(function(deck) {
+      return this.props.deck.matchups.find(function(matchup) {
+        return matchup.opponent == deck.name;
+      });
+    }.bind(this));
+  },
+  matchupCells: function() {
+    return this.matchups().map(function(matchup) {
+      return React.createElement(
+        Matchup,
+        {
+          key: matchup.opponent,
+          matchup: matchup
+        }
+      );
+    });
+  },
+  winRate: function() {
+    return (this.props.deck.win_rate * 100).toFixed(1) + "%";
+  },
+  handleClick: function() {
+    this.props.sortMatchups(this.props.deck);
+  }
+});
+
+var Matchup = React.createClass({
+  render: function() {
+    return React.createElement(
+      "td",
+      { style: { backgroundColor: this.colour() } },
+      this.winRate()
+    );
+  },
+  winRate: function() {
+    return (this.props.matchup.win_rate * 100).toFixed(1) + "%";
+  },
+  colour: function() {
+    return "rgba(" +
+      this.colourR() + ", " +
+      this.colourG() + ", " +
+      this.colourB() + ", " +
+      this.colourA() +
+    ")";
+  },
+  colourR: function() {
+    return Math.floor(
+      Math.max(
+        0,
+        Math.min(
+          255,
+          (1 - this.props.matchup.win_rate) * 255 * 4 - 255
+        )
+      )
+    );
+  },
+  colourG: function() {
+    return Math.floor(
+      Math.max(
+        0,
+        Math.min(
+          255,
+          this.props.matchup.win_rate * 255 * 4 - 255
+        )
+      )
+    );
+  },
+  colourB: function() {
+    return 0;
+  },
+  colourA: function() {
+    return Math.max(
+      this.props.matchup.win_rate,
+      1 - this.props.matchup.win_rate
+    ) * Math.max(
+      0,
+      Math.min(
+        1,
+        (this.props.matchup.games_played - 50) * 0.02
+      )
+    );
+  }
+});
+
+ReactDOM.render(
+  React.createElement(Visualisation, { data: <%= @raw_json %> }),
+  document.getElementById("visualisation")
+);
+</script>
 </body>
 </html>

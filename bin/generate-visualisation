@@ -75,7 +75,8 @@ private
   end
 end
 
-json_data = JSON.load(ARGF.read)
+@raw_json = ARGF.read
+json_data = JSON.load(@raw_json)
 
 @decks = json_data.fetch("decks").map { |deck|
   Deck.new(deck)
