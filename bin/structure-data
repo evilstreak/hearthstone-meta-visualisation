@@ -57,6 +57,7 @@ class Deck
   def to_hash
     {
       name: name,
+      hero_class: hero_class,
       frequency: frequency,
       win_rate: win_rate,
       matchups: matchups.map(&:to_hash),
@@ -65,6 +66,10 @@ class Deck
 
 private
   attr_reader :name, :records
+
+  def hero_class
+    name.split(/\s+/).last
+  end
 
   def sample_size
     @sample_size ||= records.map(&:games_played).reduce(&:+)
